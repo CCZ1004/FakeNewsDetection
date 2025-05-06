@@ -1,0 +1,150 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>News Classifier & Fake News Detector</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
+    <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;600&display=swap" rel="stylesheet">
+</head>
+<body>
+    <div class="container">
+        <header>
+            <h1>News Classifier & Fake News Detector</h1>
+            <p>Predict the category of a news article or detect fake news!</p>
+        </header>
+
+        <section class="info-section">
+            <h2>About the Application</h2>
+            <p><strong>News Categorization:</strong><br> Automatically categorize news articles into relevant topics like Sports, Politics, or Technology.</p>
+            <p><strong>Fake News Detection:</strong><br> Identify whether a news article is real or fake to combat misinformation.</p>
+            <p><strong>How it Works:</strong><br> This application uses machine learning models trained on large datasets and text vectorization techniques to analyze and predict results based on user input.</p>
+        </section>
+
+        <form id="predictionForm">
+            <textarea id="newsText" placeholder="Enter news content here..." rows="6" required></textarea><br>
+            <label for="taskSelector">Select Task:</label>
+            <select id="taskSelector" required>
+                <option value="categorization">News Categorization</option>
+                <option value="fake_news">Fake News Detection</option>
+                <option value="keywords">Keyword Extraction</option>
+            </select><br>
+            <button type="submit">Predict</button>
+        </form>
+
+        <h2>Prediction Result:</h2>
+        <div id="result">No prediction yet</div>
+    </div>
+
+    <button id="chatbotButton" class="chatbot-button">
+        <span>Chat</span>
+    </button>
+
+    <div id="chat-container" class="chat-container">
+        <div id="chat-window" class="chat-window">
+            <!-- Chat messages will appear here -->
+        </div>
+        <textarea id="userMessage" placeholder="Type a message..." rows="3"></textarea><br>
+        <button id="sendMessage">Send</button>
+    </div>
+
+    <footer>
+        <p>Powered by Flask & Machine Learning</p>
+    </footer>
+
+    <script>
+        // Handle prediction requests
+        document.getElementById('predictionForm').addEventListener('submit', function(event) {
+            event.preventDefault();
+            const newsText = document.getElementById('newsText').value;
+            const task = document.getElementById('taskSelector').value;
+            const resultDiv = document.getElementById('result');
+            resultDiv.textContent = 'Processing...';
+            fetch('/predict', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json'
+                },
+                body: JSON.stringify({ text: newsText, task: task })
+            })
+            .then(response => response.json())
+            .then(data => {
+                if (data.task === 'categorization' && data.category) {
+                    resultDiv.textContent = `Category: ${data.category}`;
+                } else if (data.task === 'fake_news' && data.result) {
+                    resultDiv.textContent = `Result: ${data.result}`;
+                } else if (data.task === 'keywords' && data.keywords) {
+                    resultDiv.textContent = `Keywords: ${data.keywords.join(', ')}`;
+                } else {
+                    resultDiv.textContent = 'Error: ' + data.error;
+                }
+            })
+            .catch(error => {
+                resultDiv.textContent = 'Error: ' + error.message;
+            });
+        });
+
+        document.addEventListener('DOMContentLoaded', function() {
+            const chatbotButton = document.getElementById('chatbotButton');
+            const chatContainer = document.getElementById('chat-container');
+            const chatWindow = document.getElementById('chat-window');
+
+            // Toggle chat container visibility when the button is clicked
+            chatbotButton.addEventListener('click', function() {
+                chatContainer.classList.toggle('visible');
+            });
+
+            // Send "Hello" message automatically when the page loads
+            fetch('/chat', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json'
+                },
+                body: JSON.stringify({ message: 'Hello' })
+            })
+            .then(response => response.json())
+            .then(data => {
+                const botResponse = data.response || "Hello! How can I assist you?";
+                chatWindow.innerHTML += `<div class="message bot-message">${botResponse}</div>`;
+                chatWindow.scrollTop = chatWindow.scrollHeight; // Scroll to latest message
+            })
+            .catch(error => {
+                chatWindow.innerHTML += `<div class="message bot-message">Error: ${error.message}</div>`;
+                chatWindow.scrollTop = chatWindow.scrollHeight;
+            });
+        });
+
+        // Handle user message and chatbot response
+        document.getElementById('sendMessage').addEventListener('click', function() {
+            const userMessage = document.getElementById('userMessage').value;
+            const chatWindow = document.getElementById('chat-window');
+            if (!userMessage) {
+                return;
+            }
+            // Display user message
+            chatWindow.innerHTML += `<div class="message user-message">${userMessage}</div>`;
+            document.getElementById('userMessage').value = ''; // Clear input
+            chatWindow.scrollTop = chatWindow.scrollHeight; // Scroll to latest message
+
+            // Send message to chatbot API
+            fetch('/chat', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json'
+                },
+                body: JSON.stringify({ message: userMessage })
+            })
+            .then(response => response.json())
+            .then(data => {
+                const botResponse = data.response || "Sorry, I didn't understand that.";
+                chatWindow.innerHTML += `<div class="message bot-message">${botResponse}</div>`;
+                chatWindow.scrollTop = chatWindow.scrollHeight; // Scroll to latest message
+            })
+            .catch(error => {
+                chatWindow.innerHTML += `<div class="message bot-message">Error: ${error.message}</div>`;
+                chatWindow.scrollTop = chatWindow.scrollHeight;
+            });
+        });
+    </script>
+</body>
+</html>
